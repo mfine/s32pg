@@ -34,6 +34,7 @@ type listObject struct {
 	LastModified string
 	Size         string
 	ETag         string
+	StorageClass string
 }
 
 func (o *listObject) lastModified() time.Time {
@@ -46,8 +47,8 @@ func (o *listObject) lastModified() time.Time {
 }
 
 func (o *listObject) upsert() {
-	log.Printf("fn=upsert key=%v last_modified=%v size=%v etag=%v", o.Key, o.LastModified, o.Size, o.ETag)
-
+	log.Printf("fn=upsert key=%v last_modified=%v size=%v etag=%v storage=%v", o.Key, o.LastModified, o.Size, o.ETag, o.StorageClass)
+	return
 	rows, err := db.Query("SELECT id FROM objects WHERE key=$1", o.Key)
 	if err != nil {
 		log.Fatal(err)
