@@ -20,7 +20,7 @@ var (
 	wg      sync.WaitGroup
 	bucket  = flag.String("bucket", "", "AWS S3 Bucket")
 	prefix  = flag.String("prefix", "", "AWS S3 Prefix")
-	workers = flag.Int("workers", 3, "Number of Workers")
+	workers = flag.Int("workers", 5, "Number of Workers")
 	keys    = s3.Keys{AccessKey: mustGetenv("AWS_ACCESS_KEY_ID"), SecretKey: mustGetenv("AWS_SECRET_ACCESS_KEY")}
 )
 
@@ -122,15 +122,20 @@ func listBucket(i string) *listBucketResult {
 	return result
 }
 
-func list(i string) {
-	result := listBucket(i)
-	for _, o := range result.Objects {
-		c <- func(p listObject) func() { return func() { p.upsert() } }(o)
+func list() {
+	marker := ""
+	for {
+		result := listBucket(marker)
+		c <- func(r *listBucketResult) func() { return func() { for _, o := range r.Objects { o.upsert() } } }(result)
+
+		if !result.IsTruncated {
+			break
+		}
+
+		marker = result.Objects[len(result.Objects)-1].Key
 	}
 
-	if result.IsTruncated {
-		c <- func() { list(result.Objects[len(result.Objects)-1].Key) }
-	}
+	close(c)
 }
 
 func work() {
@@ -157,7 +162,7 @@ func main() {
 		go work()
 	}
 
-	c <- func() { list("") }
+	list()
 
 	wg.Wait()
 }
