@@ -20,7 +20,7 @@ var (
 	wg      sync.WaitGroup
 	bucket  = flag.String("bucket", "", "AWS S3 Bucket")
 	prefix  = flag.String("prefix", "", "AWS S3 Prefix")
-	workers = flag.Int("workers", 5, "Number of Workers")
+	workers = flag.Int("workers", 3, "Number of Workers")
 	keys    = s3.Keys{AccessKey: mustGetenv("AWS_ACCESS_KEY_ID"), SecretKey: mustGetenv("AWS_SECRET_ACCESS_KEY")}
 )
 
@@ -47,7 +47,7 @@ func (o *listObject) lastModified() time.Time {
 }
 
 func (o *listObject) upsert() {
-	log.Printf("fn=upsert key=%v last_modified=%v size=%v etag=%v storage=%v", o.Key, o.LastModified, o.Size, o.ETag, o.StorageClass)
+	log.Printf("fn=upsert key=%v last_modified=%v size=%v etag=%v storage_class=%v", o.Key, o.LastModified, o.Size, o.ETag, o.StorageClass)
 
 	rows, err := db.Query("SELECT id FROM objects WHERE key=$1", o.Key)
 	if err != nil {
@@ -63,11 +63,11 @@ func (o *listObject) upsert() {
 	}
 
 	if id != "" {
-		if _, err := db.Exec("UPDATE objects SET last_modified=$2, size=$3, etag=$4 WHERE id=$1", id, o.lastModified(), o.Size, o.ETag); err != nil {
+		if _, err := db.Exec("UPDATE objects SET last_modified=$2, size=$3, etag=$4, storage_class=$5 WHERE id=$1", id, o.lastModified(), o.Size, o.ETag, o.StorageClass); err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		if _, err := db.Exec("INSERT INTO objects (key, last_modified, size, etag) VALUES ($1, $2, $3, $4)", o.Key, o.lastModified(), o.Size, o.ETag); err != nil {
+		if _, err := db.Exec("INSERT INTO objects (key, last_modified, size, etag, storage_class) VALUES ($1, $2, $3, $4, $5)", o.Key, o.lastModified(), o.Size, o.ETag, o.StorageClass); err != nil {
 			log.Fatal(err)
 		}
 	}

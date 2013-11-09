@@ -6,7 +6,8 @@ CREATE TABLE objects (
     key text NOT NULL,
     last_modified timestamp with time zone,
     size integer,
-    etag text
+    etag text,
+    storage_class text
 );
 
 CREATE UNIQUE INDEX objects_on_key ON objects USING btree(key);
